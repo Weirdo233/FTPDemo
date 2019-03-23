@@ -166,7 +166,7 @@ public class FtpFragment extends Fragment
         }
         else
         {
-            showToast("Download fail or folder is empty");
+            showToast("Upload fail");
         }
     }
 

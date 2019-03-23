@@ -125,7 +125,7 @@ public class LocalFragment extends Fragment
             showToast("Upload " + result + " files successfully");
         }
         else {
-            showToast("Upload an empty folder or file already exist");
+            showToast("Upload an empty folder or fail");
         }
     }
 

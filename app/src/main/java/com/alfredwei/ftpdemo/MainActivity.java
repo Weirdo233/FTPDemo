@@ -55,6 +55,10 @@ public class MainActivity extends AppCompatActivity
     //ftp工具类
     FtpHelper ftp;
 
+    private final String host = "192.168.129.1";
+    private final String userName = "FtpUser";
+    private final String passWord = "112233";
+
     //Record which fragment is currently shown.
     private int currentFragment = 0;
     private Fragment[] fragments = {new FtpFragment(), new GalleryFragment(), new LocalFragment()};
@@ -168,8 +172,8 @@ public class MainActivity extends AppCompatActivity
             {
                 {
                     try {
-                        ftp = new FtpHelper("192.168.129.1", "FtpUser",
-                                "112233");
+                        ftp = new FtpHelper(host, userName,
+                                passWord);
                         ftp.openConnect();
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -251,33 +255,48 @@ public class MainActivity extends AppCompatActivity
         {
             img_status.setImageResource(R.drawable.disconnected);
             img_status.setTag("disconnected");
-            showToast("Connection fail");
+            showToast("Connection fail, please check your internet setting");
             // 登出ftp服务器
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    if (ftp != null) {
-                        try {
-                            ftp.closeConnect();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }).start();
+            //new Thread(new Runnable() {
+            //    @Override
+            //    public void run() {
+            //        if (ftp != null) {
+            //            try {
+            //                ftp.closeConnect();
+            //                ftp = null;
+            //            } catch (IOException e) {
+            //                e.printStackTrace();
+            //            }
+            //        }
+            //    }
+            //}).start();
         }
         else if (objectStatus == true && img_status.getTag().equals("disconnected"))
         {
-            // 重新建立连接
-            try
-            {
-                initFtp();
-                ((FtpFragment) fragments[0]).initFtp();
-                ((GalleryFragment) fragments[1]).initFtp();
-                ((LocalFragment) fragments[2]).initFtp();
-                img_status.setImageResource(R.drawable.connected);
-                img_status.setTag("connected");
-                showToast("Reconnect successfully");
+            // 重新连接并更新各fragment的ftp引用
+            try{
+                new Thread(new Runnable() {
+                    @Override
+                    public void run()
+                    {
+                        {
+                            try {
+                                ftp = new FtpHelper(host, userName,
+                                        passWord);
+                                ftp.openConnect();
+                                ((FtpFragment) fragments[0]).initFtp();
+                                ((FtpFragment) fragments[0]).updateFtpList();
+                                ((GalleryFragment) fragments[1]).initFtp();
+                                ((LocalFragment) fragments[2]).initFtp();
+                                img_status.setImageResource(R.drawable.connected);
+                                img_status.setTag("connected");
+                                //showToast("Reconnect successfully");
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                }).start();
             }
             catch (Exception e)
             {
