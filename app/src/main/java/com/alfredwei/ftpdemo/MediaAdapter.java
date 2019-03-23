@@ -33,8 +33,10 @@ public class MediaAdapter extends RecyclerView.Adapter<MediaAdapter.ViewHolder> 
     private OnAddMediaListener mOnAddMediaListener;
 
     public interface OnAddMediaListener {
-        void onaddMedia();
+        void onAddMedia();
     }
+
+
 
     public MediaAdapter(OnAddMediaListener mOnAddMediaListener) {
         this.mOnAddMediaListener = mOnAddMediaListener;
@@ -91,7 +93,7 @@ public class MediaAdapter extends RecyclerView.Adapter<MediaAdapter.ViewHolder> 
             viewHolder.ivPicture.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    mOnAddMediaListener.onaddMedia();
+                    mOnAddMediaListener.onAddMedia();
                 }
             });
             viewHolder.llDelete.setVisibility(View.INVISIBLE);
@@ -138,6 +140,17 @@ public class MediaAdapter extends RecyclerView.Adapter<MediaAdapter.ViewHolder> 
                     }
                 });
             }
+        }
+    }
+
+    public void removeAllItem()
+    {
+        int size = getItemCount() - 1;
+        for (int i = 0; i < size; i++)
+        {
+            mMediaList.remove(0);
+            notifyItemRemoved(0);
+            notifyItemRangeChanged(0, mMediaList.size());
         }
     }
 

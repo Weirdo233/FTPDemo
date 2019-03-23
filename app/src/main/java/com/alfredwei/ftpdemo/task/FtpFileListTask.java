@@ -4,6 +4,7 @@ import android.os.AsyncTask;
 
 import com.alfredwei.ftpdemo.FtpHelper;
 import com.alfredwei.ftpdemo.FtpNetCallBack;
+import com.alfredwei.ftpdemo.MainActivity;
 import com.alfredwei.ftpdemo.fragment.FtpFragment;
 import android.support.v4.app.Fragment;
 
@@ -36,6 +37,7 @@ public class FtpFileListTask extends AsyncTask<String, Integer, List<FTPFile>>
         List<FTPFile> result = null;
         try
         {
+            if (ftpHelper != null && ftpHelper.isConnect())
                 result = ftpHelper.listFiles(currentFtpPath);
         }
         catch (Exception e)

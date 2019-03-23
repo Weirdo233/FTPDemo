@@ -62,11 +62,16 @@ public class LocalFragment extends Fragment
         //Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.local_fragment, container,false);
         localListView = (ListView) view.findViewById(R.id.listView);
-        this.ftp = ((MainActivity) getActivity()).getFtp();
+        initFtp();
         initLocalList();
         //Return the view
         return view;
 
+    }
+
+    public void initFtp()
+    {
+        this.ftp = ((MainActivity) getActivity()).getFtp();
     }
 
     private void initLocalList()
@@ -89,26 +94,38 @@ public class LocalFragment extends Fragment
          //长按上传
          localListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-            upload(localList.get(position).getAbsolutePath());
-            return true;
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id)
+            {
+                if (!isNetworkConnected())
+                {
+                    showToast("No connection");
+                    return true;
+                }
+                if (ftp == null)
+                    initFtp();
+                upload(localList.get(position).getAbsolutePath());
+                return true;
             }
             });
 
     }
 
     //上传
-    private void upload(String localFilePath) {
-        new FtpUploadTask(ftp, ((MainActivity) getActivity()).getFragments(), localFilePath, currentFtpPath).execute();
+    private void upload(String localFilePath)
+    {
+        String[] filePaths = {localFilePath};
+        new FtpUploadTask(ftp, ((MainActivity) getActivity()).getFragments(), filePaths, currentFtpPath)
+                .execute();
     }
 
-    public void uploadFinish(boolean result)
+    public void uploadFinish(Integer result)
     {
-        if (result)
+        if (result > 0)
         {
-            showToast("Upload successfully");
-        } else {
-            showToast("Upload an empty folder or fail");
+            showToast("Upload " + result + " files successfully");
+        }
+        else {
+            showToast("Upload an empty folder or file already exist");
         }
     }
 
@@ -125,6 +142,11 @@ public class LocalFragment extends Fragment
             localAdapter.notifyDataSetChanged();
             currentLocalPath = path;
         }
+    }
+
+    private boolean isNetworkConnected()
+    {
+        return ((MainActivity) getActivity()).isNetworkConnected();
     }
 
     private void showToast(String string)

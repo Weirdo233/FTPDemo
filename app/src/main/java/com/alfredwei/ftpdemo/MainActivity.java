@@ -1,7 +1,12 @@
 package com.alfredwei.ftpdemo;
 
 import android.Manifest;
+import android.content.Context;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.wifi.WifiManager;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -9,14 +14,18 @@ import android.support.design.widget.BottomNavigationView;
 import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -50,6 +59,12 @@ public class MainActivity extends AppCompatActivity
     private int currentFragment = 0;
     private Fragment[] fragments = {new FtpFragment(), new GalleryFragment(), new LocalFragment()};
 
+    private ImageView img_status;
+
+    private boolean isRegistered = false;
+    private NetWorkChangReceiver netWorkChangReceiver;
+
+
     private final int REQUEST_WRITE_EXTERNAL_STORAGE = 5556;
     private void checkPermission() {
         //检查权限（NEED_PERMISSION）是否被授权 PackageManager.PERMISSION_GRANTED表示同意授权
@@ -64,7 +79,6 @@ public class MainActivity extends AppCompatActivity
             }
             //申请权限
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_WRITE_EXTERNAL_STORAGE);
-
         }
         else {
         }
@@ -100,6 +114,7 @@ public class MainActivity extends AppCompatActivity
                 case R.id.navigation_server:
                     if (currentFragment != 0)
                     {
+                        ((FtpFragment) fragments[0]).updateFtpList();
                         switchFragment(currentFragment, 0);
                         currentFragment = 0;
                     }
@@ -123,7 +138,6 @@ public class MainActivity extends AppCompatActivity
         }
     };
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -132,11 +146,61 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
-        //initFtp();
+        img_status = (ImageView) findViewById(R.id.img_status);
+        initFtp();
+
+        FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
+        transaction.add(R.id.fragment_container, fragments[1]).hide(fragments[1]);
+        transaction.add(R.id.fragment_container, fragments[2]).hide(fragments[2]);
+        transaction.commit();
+
         switchFragment(currentFragment, 0);
-        //initFtpList();
-        //initLocalList();
-        //updateLocalList(localPath);
+
+        //监听网络状态
+        initNetWorkReceiver();
+    }
+
+    public void initFtp()
+    {
+        new Thread(new Runnable() {
+            @Override
+            public void run()
+            {
+                {
+                    try {
+                        ftp = new FtpHelper("192.168.129.1", "FtpUser",
+                                "112233");
+                        ftp.openConnect();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
+    }
+
+    private void initNetWorkReceiver()
+    {
+        //注册网络状态监听广播
+        netWorkChangReceiver = new NetWorkChangReceiver();
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION);
+        filter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION);
+        filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+        registerReceiver(netWorkChangReceiver, filter);
+        isRegistered = true;
+
+    }
+
+    public boolean isNetworkConnected()
+    {
+        ConnectivityManager mConnectivityManager =
+                    (ConnectivityManager) this.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo mNetworkInfo = mConnectivityManager.getActiveNetworkInfo();
+        if (mNetworkInfo != null) {
+            return mNetworkInfo.isAvailable();
+        }
+        return false;
     }
 
     public void setCurrentFtpPath(String path)
@@ -181,6 +245,48 @@ public class MainActivity extends AppCompatActivity
 
     private boolean mIsExit = false;
 
+    public void changeConnectState(boolean objectStatus)
+    {
+        if (objectStatus == false && img_status.getTag().equals("connected"))
+        {
+            img_status.setImageResource(R.drawable.disconnected);
+            img_status.setTag("disconnected");
+            showToast("Connection fail");
+            // 登出ftp服务器
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    if (ftp != null) {
+                        try {
+                            ftp.closeConnect();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }).start();
+        }
+        else if (objectStatus == true && img_status.getTag().equals("disconnected"))
+        {
+            // 重新建立连接
+            try
+            {
+                initFtp();
+                ((FtpFragment) fragments[0]).initFtp();
+                ((GalleryFragment) fragments[1]).initFtp();
+                ((LocalFragment) fragments[2]).initFtp();
+                img_status.setImageResource(R.drawable.connected);
+                img_status.setTag("connected");
+                showToast("Reconnect successfully");
+            }
+            catch (Exception e)
+            {
+                showToast("Reconnect fail");
+                e.printStackTrace();
+            }
+        }
+    }
+
     /**
      * 按键事件监听
      * @param keyCode
@@ -206,7 +312,7 @@ public class MainActivity extends AppCompatActivity
             {
                 currentLocalPath = currentLocalPath.substring(0, currentLocalPath.lastIndexOf("/"));
                 LocalFragment localFragment = (LocalFragment) fragments[2];
-                localFragment.setCurrentFtpPath(currentLocalPath);
+                localFragment.setCurrentLocalPath(currentLocalPath);
                 localFragment.updateLocalList(currentLocalPath);
             }
             //处在根目录，两次按下返回键退出
@@ -237,8 +343,28 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    protected void onDestroy() {
+    protected void onDestroy()
+    {
         super.onDestroy();
+        // 登出ftp服务器
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (ftp != null) {
+                    try {
+                        ftp.closeConnect();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
+        Log.d("FtpFragment", "onDestroy is called.");
+        Log.d("FtpClient", "Logout FTP server.");
+        //解绑
+        if (isRegistered) {
+            unregisterReceiver(netWorkChangReceiver);
+        }
     }
 }
 

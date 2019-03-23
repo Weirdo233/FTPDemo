@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white"
     android:orientation="vertical"
     android:padding="16dp"
     tools:mContext=".MainActivity">
@@ -15,33 +15,25 @@
         android:layout_marginBottom="10dp"
         android:gravity="center"
         android:text="Select picture/video"
-        android:textSize="15sp" />
+        android:textSize="15dp" />
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"
-        android:layout_height="400dp"
+        android:layout_height="550dp"
         android:layout_marginTop="5dp"
         android:overScrollMode="never" />
 
-    <Button
-        android:id="@+id/btn_compress_picture"
-        android:layout_width="match_parent"
-        android:visibility="gone"
-        android:layout_height="wrap_content"
-        android:text="图片压缩演示" />
+    <ImageButton
+        android:layout_gravity="right"
+        android:layout_marginEnd="30dp"
+        android:id="@+id/btn_upload"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/button_selector"
+        app:srcCompat="@drawable/upload"
+        android:tint="@android:color/white"
+        />
 
-    <Button
-        android:id="@+id/btn_compress_video"
-        android:layout_width="match_parent"
-        android:visibility="gone"
-        android:layout_height="wrap_content"
-        android:text="视频压缩演示" />
 
-    <Button
-        android:id="@+id/btn_take_picture"
-        android:layout_width="match_parent"
-        android:visibility="gone"
-        android:layout_height="wrap_content"
-        android:text="拍照/视频演示" />
 </LinearLayout>

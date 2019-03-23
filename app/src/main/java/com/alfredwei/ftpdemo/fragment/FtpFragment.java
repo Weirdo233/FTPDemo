@@ -2,6 +2,7 @@ package com.alfredwei.ftpdemo.fragment;
 
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -66,29 +67,14 @@ public class FtpFragment extends Fragment
     }
 
     //初始化FtpClient
-    private void initFtp()
+    public void initFtp()
     {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                if (ftp == null) {
-                    try {
-                        ftp = new FtpHelper("192.168.129.1", "FtpUser",
-                                "112233");
-                        ftp.openConnect();
-                        ((MainActivity) getActivity()).setFtp(ftp);
-                        //更新ftp文件列表
-                        updateFtpList();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }).start();
+        this.ftp = ((MainActivity) getActivity()).getFtp();
     }
     //初始化ListView相关
-    private void initFtpList()
+    public void initFtpList()
     {
+        updateFtpList();
         ftpAdapter = new FtpFileAdapter(this.getContext(), R.layout.item_layout, ftpList);
         ftpListView.setAdapter(ftpAdapter);
         //点击进入文件夹
@@ -97,6 +83,13 @@ public class FtpFragment extends Fragment
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id)
             {
+                if (!isNetworkConnected())
+                {
+                    showToast("No connection");
+                    return;
+                }
+                if (ftp == null)
+                    initFtp();
                 FTPFile file = ftpList.get(position);
                 if (file.isDirectory())
                 {
@@ -108,10 +101,18 @@ public class FtpFragment extends Fragment
         });
 
         //长按下载
-        ftpListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+        ftpListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener()
+        {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id)
             {
+                if (!isNetworkConnected())
+                {
+                    showToast("No connection");
+                    return true;
+                }
+                if (ftp == null)
+                    initFtp();
                 // TODO:弹出Dialog
                 FTPFile file = ftpList.get(position);
                 if (file.isDirectory()) {
@@ -174,24 +175,14 @@ public class FtpFragment extends Fragment
         Toast.makeText(getActivity().getApplicationContext(), string, Toast.LENGTH_SHORT).show();
     }
 
+    private boolean isNetworkConnected()
+    {
+        return ((MainActivity) getActivity()).isNetworkConnected();
+    }
+
     @Override
     public void onDestroy()
     {
-        // 登出ftp服务器
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                if (ftp != null) {
-                    try {
-                        ftp.closeConnect();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }).start();
-        Log.d("FtpFragment", "onDestroy is called.");
-        Log.d("FtpClient", "Logout FTP server.");
         super.onDestroy();
     }
 }
