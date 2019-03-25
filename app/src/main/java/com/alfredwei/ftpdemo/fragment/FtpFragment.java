@@ -49,7 +49,7 @@ public class FtpFragment extends Fragment
     //当前ftp路径
     private String currentFtpPath = FtpHelper.REMOTE_PATH;
     //文件下载路径
-    private String localPath = Environment.getExternalStorageDirectory().getAbsolutePath()+"/FTPDemo";
+    private String localPath;
 
     public FtpFragment() {
         //Required empty constructor
@@ -59,8 +59,10 @@ public class FtpFragment extends Fragment
     { this.currentFtpPath = string; }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState)
+    {
         super.onCreate(savedInstanceState);
+        localPath = Environment.getExternalStorageDirectory().getAbsolutePath()+"/"+getString(R.string.app_name);
     }
 
     @Nullable

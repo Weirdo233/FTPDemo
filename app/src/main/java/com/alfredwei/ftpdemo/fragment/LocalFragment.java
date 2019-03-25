@@ -122,16 +122,11 @@ public class LocalFragment extends Fragment
         });
         updateLocalList(currentLocalPath);
 
-         //长按上传
+         //长按
          localListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view,final int position, long id)
             {
-                if (!isNetworkConnected())
-                {
-                    showToast("No connection");
-                    return true;
-                }
                 if (ftp == null)
                     initFtp();
                 //弹出Dialog
@@ -147,6 +142,11 @@ public class LocalFragment extends Fragment
                 btn_upload.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View view) {
+                        if (!isNetworkConnected())
+                        {
+                            showToast("No connection");
+                            return ;
+                        }
                         upload(localList.get(position).getAbsolutePath());
                         dialog.dismiss();
                     }
