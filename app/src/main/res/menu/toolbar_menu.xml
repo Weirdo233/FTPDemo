@@ -13,6 +13,14 @@
         android:title="Upload"
         app:showAsAction="always"
         android:visible="false"/>
+
+    <item
+        android:id="@+id/download"
+        android:icon="@drawable/download"
+        android:title="Download"
+        app:showAsAction="always"
+        android:visible="false"/>
+
     <item
         android:id="@+id/delete"
         android:icon="@drawable/trash"

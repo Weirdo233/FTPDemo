@@ -67,9 +67,12 @@ public class MainActivity extends AppCompatActivity
     //Record which fragment is currently shown.
     private int currentFragment = 0;
     private Fragment[] fragments = {new FtpFragment(), new GalleryFragment(), new LocalFragment()};
-
     private ImageView img_status;
     private Toolbar toolbar;
+    private ListView listView;
+    private BottomNavigationView navigation;
+
+    private boolean isInMultiSelect = false;
     private boolean isRegistered = false;
     private NetWorkChangReceiver netWorkChangReceiver;
 
@@ -152,16 +155,16 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         checkPermission();
         setContentView(R.layout.activity_main);
-        BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
+        navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
         initFtp();
-
-        initToolBar();
 
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.add(R.id.fragment_container, fragments[1]).hide(fragments[1]);
         transaction.add(R.id.fragment_container, fragments[2]).hide(fragments[2]);
         transaction.commit();
+
+        initToolbar();
 
         switchFragment(currentFragment, 0);
 
@@ -188,11 +191,84 @@ public class MainActivity extends AppCompatActivity
         }).start();
     }
 
-    private void initToolBar()
+    private void initToolbar()
     {
-        //img_status = (ImageView) findViewById(R.id.img_status);
         toolbar = (Toolbar) findViewById(R.id.toolbar);
         toolbar.inflateMenu(R.menu.toolbar_menu);
+        toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener()
+        {
+            @Override
+            public boolean onMenuItemClick(MenuItem menuItem)
+            {
+                switch (menuItem.getItemId())
+                {
+                    case R.id.multiselect:
+                        // GalleryFragment不允许多选
+                        if (currentFragment == 1)
+                            break;
+                        // 进入多选模式
+                        initMultiSelectToolbar();
+                        break;
+                }
+                return true;
+            }
+        });
+    }
+
+    private void initMultiSelectToolbar()
+    {
+        navigation.setVisibility(View.INVISIBLE);
+        isInMultiSelect = true;
+
+        toolbar.getMenu().findItem(R.id.delete).setVisible(true);
+        toolbar.getMenu().findItem(R.id.multiselect).setVisible(false);
+        toolbar.setNavigationIcon(R.drawable.back_arrow);
+        //TODO:进入多选listView
+        if (currentFragment == 2)
+        {
+            toolbar.getMenu().findItem(R.id.upload).setVisible(true);
+            ((LocalFragment) fragments[currentFragment]).initCheckList();
+        }
+        else if (currentFragment == 0)
+        {
+            toolbar.getMenu().findItem(R.id.download).setVisible(true);
+            ((FtpFragment) fragments[currentFragment]).initCheckList();
+        }
+        toolbar.setNavigationOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                returnToToolbar();
+            }
+        });
+    }
+
+    public void returnToToolbar()
+    {
+        isInMultiSelect = false;
+        // 重新响应导航栏
+        toolbar.getMenu().findItem(R.id.delete).setVisible(false);
+        toolbar.getMenu().findItem(R.id.multiselect).setVisible(true);
+        // 取消NavigationIcon
+        toolbar.setNavigationIcon(null);
+        // 显示底部导航栏
+        navigation.setVisibility(View.VISIBLE);
+        if (currentFragment == 2)
+        {
+            toolbar.getMenu().findItem(R.id.upload).setVisible(false);
+            ((LocalFragment) fragments[currentFragment]).initLocalList();
+        }
+        else if (currentFragment == 0)
+        {
+            ((FtpFragment) fragments[currentFragment]).initFtpList();
+            toolbar.getMenu().findItem(R.id.download).setVisible(false);
+        }
+    }
+
+    public Toolbar getToolbar()
+    {
+        return toolbar;
     }
 
     private void initNetWorkReceiver()
@@ -331,8 +407,12 @@ public class MainActivity extends AppCompatActivity
     {
         if (keyCode == KeyEvent.KEYCODE_BACK)
         {
+            if (isInMultiSelect)
+            {
+                returnToToolbar();
+            }
             //ftp文件返回上一层
-            if (!currentFtpPath.equals(FtpHelper.REMOTE_PATH) && currentFragment == 0)
+            else if (!currentFtpPath.equals(FtpHelper.REMOTE_PATH) && currentFragment == 0)
             {
                 currentFtpPath = currentFtpPath.substring(0, currentFtpPath.lastIndexOf("/"));
                 FtpFragment ftpFragment = (FtpFragment) fragments[0];

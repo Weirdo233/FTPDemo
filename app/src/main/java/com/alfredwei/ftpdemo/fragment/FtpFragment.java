@@ -8,18 +8,23 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
+import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.CheckedTextView;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.Toast;
 
 import com.alfredwei.ftpdemo.FtpFileAdapter;
+import com.alfredwei.ftpdemo.FtpFileCheckAdapter;
 import com.alfredwei.ftpdemo.FtpHelper;
+import com.alfredwei.ftpdemo.LocalFileCheckAdapter;
 import com.alfredwei.ftpdemo.MainActivity;
 import com.alfredwei.ftpdemo.R;
 import com.alfredwei.ftpdemo.task.FtpDeleteTask;
@@ -200,6 +205,77 @@ public class FtpFragment extends Fragment
         });
 
     }
+
+    public void initCheckList()
+    {
+        FtpFileCheckAdapter adapter = new FtpFileCheckAdapter(getContext(), R.layout.check_item_layout, ftpList);
+        ftpListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+        ftpListView.setAdapter(adapter);
+        ftpListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id)
+            {
+                CheckedTextView item = view.findViewById(R.id.checkedTextView);
+                item.toggle();
+            }
+        });
+        updateFtpList();
+        ((MainActivity) getActivity()).getToolbar().getMenu().findItem(R.id.download)
+                .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
+                {
+                    @Override
+                    public boolean onMenuItemClick(MenuItem menuItem)
+                    {
+                        if (!isNetworkConnected())
+                        {
+                            showToast("No connection");
+                            return false;
+                        }
+                        ArrayList<String> paths = new ArrayList<>();
+                        SparseBooleanArray  checkedItemPositions = ftpListView.getCheckedItemPositions();
+                        //循环遍历集合中所有的数据，获取每个item是否在SparseBooleanArray存储，以及对应的值；
+                        for (int i = 0; i < ftpList.size(); i++) {
+                            //根据key获取对应的boolean值，为true则下载
+                            if (checkedItemPositions.get(i))
+                            {
+                                FTPFile file = ftpList.get(i);
+                                if (file.isDirectory()) {
+                                    downLoadFolder(file.getName());
+                                } else if (file.isFile()) {
+                                    downLoadFile(file.getName());
+                                }
+                            }
+                        }
+                        ((MainActivity) getActivity()).returnToToolbar();
+                        return false;
+                    }
+                });
+
+        ((MainActivity) getActivity()).getToolbar().getMenu().findItem(R.id.delete)
+                .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
+                {
+                    @Override
+                    public boolean onMenuItemClick(MenuItem menuItem)
+                    {
+                        if (!isNetworkConnected())
+                        {
+                            showToast("No connection");
+                            return false;
+                        }
+                        ArrayList<String> paths = new ArrayList<>();
+                        SparseBooleanArray checkedItemPositions = ftpListView.getCheckedItemPositions();
+                        //循环遍历集合中所有的数据，获取每个item是否在SparseBooleanArray存储，以及对应的值；
+                        for (int i = 0; i < ftpList.size(); i++) {
+                            //根据key获取对应的boolean值，为true则加入paths
+                            if (checkedItemPositions.get(i))
+                                delete(ftpList.get(i).getName());
+                        }
+                        ((MainActivity) getActivity()).returnToToolbar();
+                        return false;
+                    }
+                });
+    }
+
     //创建异步线程，更新ftp文件列表
     public void updateFtpList()
     {

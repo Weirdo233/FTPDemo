@@ -15,12 +15,14 @@ import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.FileProvider;
 import android.util.Log;
+import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.CheckedTextView;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -34,11 +36,13 @@ import com.alfredwei.ftpdemo.MainActivity;
 import com.alfredwei.ftpdemo.R;
 import com.alfredwei.ftpdemo.task.FtpFileListTask;
 import com.alfredwei.ftpdemo.task.FtpUploadTask;
+import com.alfredwei.ftpdemo.LocalFileCheckAdapter;
 
 import org.apache.commons.net.ftp.FTPFile;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -49,7 +53,6 @@ public class LocalFragment extends Fragment
     private List<File> localList = new ArrayList<>();
     private LocalFileAdapter localAdapter;
     private FtpHelper ftp;
-    private Toolbar toolbar;
     //当前ftp路径
     private String currentFtpPath = FtpHelper.REMOTE_PATH;
     //当前本地路径
@@ -79,8 +82,9 @@ public class LocalFragment extends Fragment
 
         //Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.local_fragment, container,false);
+        //View view = inflater.inflate(R.layout.c, container,false);
         localListView = (ListView) view.findViewById(R.id.listView);
-        initToolbar();
+
         initFtp();
         initLocalList();
         //Return the view
@@ -88,53 +92,14 @@ public class LocalFragment extends Fragment
 
     }
 
-    private void initToolbar()
-    {
-        toolbar = ((MainActivity) getActivity()).findViewById(R.id.toolbar);
-        toolbar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener()
-        {
-            @Override
-            public boolean onMenuItemClick(MenuItem menuItem)
-            {
-                switch (menuItem.getItemId())
-                {
-                    case R.id.multiselect:
-                        //localListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
 
-                        initMultiSelectToolbar();
-                        break;
-                }
-                return true;
-            }
-        });
-    }
-
-    private void initMultiSelectToolbar()
-    {
-        toolbar.getMenu().findItem(R.id.upload).setVisible(true);
-        toolbar.getMenu().findItem(R.id.delete).setVisible(true);
-        toolbar.getMenu().findItem(R.id.multiselect).setVisible(false);
-        toolbar.setNavigationIcon(R.drawable.back_arrow);
-        //TODO:
-        toolbar.setNavigationOnClickListener(new View.OnClickListener()
-        {
-            @Override
-            public void onClick(View view)
-            {
-                toolbar.getMenu().findItem(R.id.upload).setVisible(false);
-                toolbar.getMenu().findItem(R.id.delete).setVisible(false);
-                toolbar.getMenu().findItem(R.id.multiselect).setVisible(true);
-                toolbar.setNavigationIcon(null);
-            }
-        });
-    }
 
     public void initFtp()
     {
         this.ftp = ((MainActivity) getActivity()).getFtp();
     }
 
-    private void initLocalList()
+    public void initLocalList()
     {
         localAdapter = new LocalFileAdapter(getContext(), R.layout.item_layout, localList);
 
@@ -246,7 +211,74 @@ public class LocalFragment extends Fragment
                 return true;
             }
             });
+    }
 
+    public void initCheckList()
+    {
+        LocalFileCheckAdapter adapter = new LocalFileCheckAdapter(getContext(), R.layout.check_item_layout, localList);
+        localListView.setChoiceMode(ListView.CHOICE_MODE_MULTIPLE);
+        localListView.setAdapter(adapter);
+        localListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id)
+            {
+                CheckedTextView item = view.findViewById(R.id.checkedTextView);
+                item.toggle();
+            }
+        });
+        updateLocalList(currentLocalPath);
+
+        // Upload按钮
+        ((MainActivity) getActivity()).getToolbar().getMenu().findItem(R.id.upload)
+                .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
+                {
+                    @Override
+                    public boolean onMenuItemClick(MenuItem menuItem)
+                    {
+                        if (!isNetworkConnected())
+                        {
+                            showToast("No connection");
+                            return false;
+                        }
+                        ArrayList<String> paths = new ArrayList<>();
+                        SparseBooleanArray  checkedItemPositions = localListView.getCheckedItemPositions();
+                        //循环遍历集合中所有的数据，获取每个item是否在SparseBooleanArray存储，以及对应的值；
+                        for (int i = 0; i < localList.size(); i++) {
+                            //根据key获取对应的boolean值，为true则加入paths
+                            if (checkedItemPositions.get(i))
+                                paths.add(localList.get(i).getAbsolutePath());
+                        }
+                        upload((String[])paths.toArray(new String[paths.size()]));
+                        ((MainActivity) getActivity()).returnToToolbar();
+                        return false;
+                    }
+                });
+
+        // Delete按钮
+        ((MainActivity) getActivity()).getToolbar().getMenu().findItem(R.id.delete)
+                .setOnMenuItemClickListener(new MenuItem.OnMenuItemClickListener()
+                {
+                    @Override
+                    public boolean onMenuItemClick(MenuItem menuItem)
+                    {
+                        ArrayList<String> paths = new ArrayList<>();
+                        SparseBooleanArray  checkedItemPositions = localListView.getCheckedItemPositions();
+                        //循环遍历集合中所有的数据，获取每个item是否在SparseBooleanArray存储，以及对应的值；
+                        for (int i = 0; i < localList.size(); i++) {
+                            //根据key获取对应的boolean值，为true则加入paths
+                            if (checkedItemPositions.get(i))
+                                paths.add(localList.get(i).getAbsolutePath());
+                        }
+                        // 删除选中文件
+                        for (int i = 0; i < paths.size(); i++)
+                            delete(paths.get(i));
+                        // 更新父路径文件列表
+                        String parentPath = paths.get(0).substring(0, paths.get(0).lastIndexOf("/"));
+                        updateLocalList(parentPath);
+                        ((MainActivity) getActivity()).returnToToolbar();
+                        return false;
+                    }
+                });
     }
 
     /**
@@ -285,12 +317,13 @@ public class LocalFragment extends Fragment
     }
 
     //上传
-    private void upload(String localFilePath)
+    private void upload(String... localFilePath)
     {
-        String[] filePaths = {localFilePath};
+        String[] filePaths = localFilePath;
         new FtpUploadTask(ftp, ((MainActivity) getActivity()).getFragments(), filePaths, currentFtpPath)
                 .execute();
     }
+
 
     public void uploadFinish(Integer result)
     {
@@ -315,7 +348,6 @@ public class LocalFragment extends Fragment
             Collections.addAll(localList, files);
             localAdapter.notifyDataSetChanged();
             currentLocalPath = path;
-
         }
     }
 

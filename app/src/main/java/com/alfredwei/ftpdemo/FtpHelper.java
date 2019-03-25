@@ -312,6 +312,7 @@ public class FtpHelper implements Serializable
         if (localFolder.exists() && localFolder.isDirectory()) {
             //先在ftp上创建对应的文件夹
             String ftpFolder = remotePath + "/" + localFolder.getName();
+            // TODO:不上传空文件夹
             createFolder(ftpFolder);
             // 改变FTP目录
             ftpClient.changeWorkingDirectory(ftpFolder);
