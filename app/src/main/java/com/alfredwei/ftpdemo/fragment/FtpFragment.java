@@ -6,6 +6,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.util.SparseBooleanArray;
@@ -44,6 +45,8 @@ public class FtpFragment extends Fragment
     private ListView ftpListView;
     private List<FTPFile> ftpList = new ArrayList<>();
     private FtpFileAdapter ftpAdapter;
+    private SwipeRefreshLayout swipeLayout;
+
 
     private FtpHelper ftp;
     //当前ftp路径
@@ -72,6 +75,8 @@ public class FtpFragment extends Fragment
         //Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.ftp_fragment, container,false);
         ftpListView = (ListView) view.findViewById(R.id.listView);
+        swipeLayout = (SwipeRefreshLayout) view.findViewById(R.id.swipeLayout);
+
         initFtp();
         initFtpList();
         Log.d("FtpFragment", "onCreateView is called.");
@@ -206,6 +211,17 @@ public class FtpFragment extends Fragment
             }
         });
 
+        swipeLayout.setColorSchemeResources(R.color.colorPrimary);
+        swipeLayout.setSize(SwipeRefreshLayout.LARGE);
+        swipeLayout.setProgressBackgroundColorSchemeResource(R.color.white);
+        swipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener()
+        {
+            @Override
+            public void onRefresh()
+            {
+                updateFtpList();
+            }
+        });
     }
 
     public void initCheckList()
@@ -285,8 +301,10 @@ public class FtpFragment extends Fragment
     }
 
     //在listView中刷新文件列表
-    public void getFtpFileList(List<FTPFile> ftpFileList) {
-        if (ftpFileList != null) {
+    public void getFtpFileList(List<FTPFile> ftpFileList)
+    {
+        if (ftpFileList != null)
+        {
             ftpList.clear();
             ftpList.addAll(ftpFileList);
             getActivity().runOnUiThread(new Runnable() {
@@ -295,6 +313,7 @@ public class FtpFragment extends Fragment
                     ftpAdapter.notifyDataSetChanged();
                 }
             });
+            swipeLayout.setRefreshing(false);
         }
     }
 

@@ -31,8 +31,8 @@
         android:layout_width="60dp"
         android:layout_height="60dp"
         android:background="@drawable/button_selector"
-        app:srcCompat="@drawable/upload"
-        android:tint="@android:color/white"
+        android:src="@drawable/upload"
+        android:tint="@color/white"
         />
 
 
