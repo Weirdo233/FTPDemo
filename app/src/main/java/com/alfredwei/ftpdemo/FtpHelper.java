@@ -209,35 +209,29 @@ public class FtpHelper implements Serializable
         //下载的数量
         int fileCount = 0;
         // 初始化FTP当前目录
-        currentPath = remotePath;
+        String currentPath = remotePath;
         // 更改FTP目录
         ftpClient.changeWorkingDirectory(remotePath);
         // 得到FTP当前目录下所有文件
         FTPFile[] ftpFiles = ftpClient.listFiles();
+        // 当前目录下无文件
+        if (ftpFiles.length == 0)
+            return 0;
         //在本地创建对应文件夹目录
-        //localPath = localPath + "/" + remotePath.substring(remotePath.lastIndexOf("/"));
-        //File localFolder = new File(localPath);
-        //if (!localFolder.exists()) {
-        //    localFolder.mkdirs();
-        //}
+        localPath = localPath + "/" + remotePath.substring(remotePath.lastIndexOf("/"));
+        File localFolder = new File(localPath);
+        if (!localFolder.exists()) {
+            localFolder.mkdirs();
+        }
         // 循环遍历
         for (FTPFile ftpFile : ftpFiles) {
             if (!ftpFile.getName().equals("..")
                     && !ftpFile.getName().equals(".")) {
                 if (ftpFile.isDirectory()) {
                     //下载文件夹
-                    currentPath = currentPath + "/" + ftpFile.getName();
-                    //int count = downloadFolder(currentPath + "/" + ftpFile.getName(), localPath);
-                    int count = downloadFolder(currentPath, localPath);
+                    int count = downloadFolder(currentPath + "/" + ftpFile.getName(), localPath);
                     fileCount += count;
                 } else if (ftpFile.isFile()) {
-                    //在本地创建对应文件夹目录
-                    //localPath = localPath + "/" + remotePath.substring(remotePath.lastIndexOf("/"));
-                    localPath = localPath + "/" + remotePath;
-                    File localFolder = new File(localPath);
-                    if (!localFolder.exists()) {
-                        localFolder.mkdirs();
-                    }
                     // 下载单个文件
                     boolean flag = downloadSingle(new File(localPath + "/" + ftpFile.getName()), ftpFile);
                     if (flag) {
@@ -355,6 +349,52 @@ public class FtpHelper implements Serializable
         // 关闭文件流
         inputStream.close();
         return flag;
+    }
+
+    public void delete(String remotePath, String fileName) throws IOException
+    {
+        currentPath = remotePath;
+        ftpClient.changeWorkingDirectory(remotePath);
+        FTPFile[] ftpFiles = ftpClient.listFiles();
+        // 循环遍历
+        for (FTPFile ftpFile : ftpFiles)
+        {
+            // 找到需要下载的文件
+            if (ftpFile.getName().equals(fileName))
+            {
+                if (ftpFile.isDirectory()) {
+                    deleteFolder(remotePath + "/" + fileName);
+                } else {
+                    // 删除单个文件
+                    ftpClient.deleteFile(fileName);
+                }
+            }
+        }
+    }
+
+    private void deleteFolder(String remoteFolderpath) throws IOException
+    {
+        FTPFile[] ftpFiles = ftpClient.listFiles(remoteFolderpath);
+        if(ftpFiles.length > 0)
+        {
+            for (FTPFile ftpFile : ftpFiles) {
+                if(ftpFile.isDirectory()){
+                    deleteFolder(remoteFolderpath + "/" + ftpFile.getName());
+                }
+                else {
+                    String deleteFilePath = remoteFolderpath + "/" + ftpFile.getName();
+                    ftpClient.deleteFile(deleteFilePath);
+                }
+            }
+        }
+        ftpClient.removeDirectory(remoteFolderpath);
+    }
+
+    public boolean rename(String remotePath, String oldfileName, String newFileName) throws IOException
+    {
+        currentPath = remotePath;
+        ftpClient.changeWorkingDirectory(remotePath);
+        return ftpClient.rename(oldfileName, newFileName);
     }
 
     /**

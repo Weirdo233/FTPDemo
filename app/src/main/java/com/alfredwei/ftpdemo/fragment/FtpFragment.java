@@ -1,15 +1,19 @@
 package com.alfredwei.ftpdemo.fragment;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.Toast;
@@ -18,9 +22,11 @@ import com.alfredwei.ftpdemo.FtpFileAdapter;
 import com.alfredwei.ftpdemo.FtpHelper;
 import com.alfredwei.ftpdemo.MainActivity;
 import com.alfredwei.ftpdemo.R;
+import com.alfredwei.ftpdemo.task.FtpDeleteTask;
 import com.alfredwei.ftpdemo.task.FtpDownloadFileTask;
 import com.alfredwei.ftpdemo.task.FtpDownloadFolderTask;
 import com.alfredwei.ftpdemo.task.FtpFileListTask;
+import com.alfredwei.ftpdemo.task.FtpRenameTask;
 
 import org.apache.commons.net.ftp.FTPFile;
 
@@ -104,7 +110,7 @@ public class FtpFragment extends Fragment
         ftpListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener()
         {
             @Override
-            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id)
+            public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id)
             {
                 if (!isNetworkConnected())
                 {
@@ -113,13 +119,82 @@ public class FtpFragment extends Fragment
                 }
                 if (ftp == null)
                     initFtp();
-                // TODO:弹出Dialog
-                FTPFile file = ftpList.get(position);
-                if (file.isDirectory()) {
-                    downLoadFolder(file.getName());
-                } else if (file.isFile()) {
-                    downLoadFile(file.getName());
-                }
+                final AlertDialog.Builder bulder = new AlertDialog.Builder(getContext());
+                View view1 = View.inflate(getContext(), R.layout.ftp_dialog_layout, null);
+                bulder.setTitle(ftpList.get(position).getName())
+                        .setView(view1)
+                        .create();
+                Button btn_download = (Button) view1.findViewById(R.id.btn_download);
+                Button btn_delete = (Button) view1.findViewById(R.id.btn_delete);
+                Button btn_rename = (Button) view1.findViewById(R.id.btn_rename);
+
+                final AlertDialog dialog = bulder.show();
+                btn_download.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        FTPFile file = ftpList.get(position);
+                        if (file.isDirectory()) {
+                            downLoadFolder(file.getName());
+                        } else if (file.isFile()) {
+                            downLoadFile(file.getName());
+                        }
+                        dialog.dismiss();
+                    }
+                });
+                btn_delete.setOnClickListener(new View.OnClickListener()
+                {
+                    @Override
+                    public void onClick(View view)
+                    {
+                        FTPFile file = ftpList.get(position);
+                        delete(file.getName());
+                        dialog.dismiss();
+                    }
+                });
+                btn_rename.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        final String path = currentFtpPath + "/" + ftpList.get(position).getName();
+                        final String parentPath = currentFtpPath;
+                        final String oldFileName = path.substring(path.lastIndexOf("/") + 1);
+                        // 修改文件名Dialog
+                        final AlertDialog.Builder bulder = new AlertDialog.Builder(getContext());
+                        View view1 = View.inflate(getContext(), R.layout.rename_dialog_layout, null);
+                        final EditText edt_newFileName = (EditText) view1.findViewById(R.id.new_file_name);
+                        edt_newFileName.setText(oldFileName);
+                        bulder.setTitle("Rename")
+                                .setView(view1)
+                                .setPositiveButton("Confirm", new DialogInterface.OnClickListener()
+                                {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i)
+                                    {
+                                        if (edt_newFileName.getText().length() == 0)
+                                        {
+                                            showToast("File name cannot be empty");return;
+                                        }
+                                        if (edt_newFileName.getText().equals(oldFileName))
+                                        {
+                                            showToast("File or directory already exist");return;
+                                        }
+                                        String newFileName = edt_newFileName.getText().toString();
+                                        rename(oldFileName, newFileName);
+                                        dialog.dismiss();
+                                    }
+                                })
+                                .setNegativeButton("Cancel", new DialogInterface.OnClickListener()
+                                {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i)
+                                    {
+                                    }
+                                })
+                                .create();
+                        final AlertDialog dialog1 = bulder.show();
+                    }
+                });
+
+
                 return true;
             }
         });
@@ -159,15 +234,34 @@ public class FtpFragment extends Fragment
         new FtpDownloadFolderTask(ftp, ((MainActivity) getActivity()).getFragments(), currentFtpPath + "/" + folderName, localPath).execute();
     }
 
+    private void delete(String fileName)
+    {
+        new FtpDeleteTask(ftp, ((MainActivity) getActivity()).getFragments(), currentFtpPath, fileName).execute();
+    }
+
+    private void rename(String oldFileName, String newFileName)
+    {
+        new FtpRenameTask(ftp, ((MainActivity) getActivity()).getFragments(), currentFtpPath, oldFileName, newFileName).execute();
+    }
+
+
     public void downLoadFinish(boolean result) {
         if (result)
-        {
             showToast("Download successfully");
-        }
         else
-        {
-            showToast("Upload fail");
-        }
+            showToast("Download fail or folder is empty");
+    }
+
+    public void deleteFinish(boolean result)
+    {
+        if (!result)
+            showToast("Delete fail");
+    }
+
+    public void renameFinish(boolean result)
+    {
+        if (!result)
+            showToast("Rename fail");
     }
 
     private void showToast(String string)

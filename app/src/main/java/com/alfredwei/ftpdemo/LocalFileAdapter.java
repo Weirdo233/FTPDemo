@@ -10,6 +10,7 @@ import android.widget.TextView;
 import com.alfredwei.ftpdemo.ItemViewHolder;
 import java.io.File;
 import java.util.List;
+import com.bumptech.glide.Glide;
 
 public class LocalFileAdapter extends ArrayAdapter<File>
 {
@@ -42,10 +43,19 @@ public class LocalFileAdapter extends ArrayAdapter<File>
         }
 
         viewHolder.fileName.setText(file.getName());
+        String fileType =  file.getName().substring(file.getName().lastIndexOf(".") + 1);
         if (file.isDirectory())
             viewHolder.icon.setImageResource(R.drawable.folder_2);
+        // 加载缩略图
+        else if (fileType.equals("jpg") || fileType.equals("jpeg") || fileType.equals("png"))
+            Glide.with(view)
+                    .load(file.getAbsolutePath())
+                    .into(viewHolder.icon);
         else
             viewHolder.icon.setImageResource(R.drawable.file);
+
+
+
         Log.d(getContext().getPackageName(), file.getName());
         return view;
     }

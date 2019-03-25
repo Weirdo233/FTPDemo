@@ -1,11 +1,14 @@
 package com.alfredwei.ftpdemo;
 
 import android.Manifest;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.net.wifi.WifiManager;
 import android.os.Environment;
 import android.os.Handler;
@@ -24,6 +27,8 @@ import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.ImageView;
 import android.widget.ListView;
@@ -64,10 +69,9 @@ public class MainActivity extends AppCompatActivity
     private Fragment[] fragments = {new FtpFragment(), new GalleryFragment(), new LocalFragment()};
 
     private ImageView img_status;
-
+    private Toolbar toolbar;
     private boolean isRegistered = false;
     private NetWorkChangReceiver netWorkChangReceiver;
-
 
     private final int REQUEST_WRITE_EXTERNAL_STORAGE = 5556;
     private void checkPermission() {
@@ -150,8 +154,9 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
         navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
-        img_status = (ImageView) findViewById(R.id.img_status);
         initFtp();
+
+        initToolBar();
 
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         transaction.add(R.id.fragment_container, fragments[1]).hide(fragments[1]);
@@ -164,7 +169,7 @@ public class MainActivity extends AppCompatActivity
         initNetWorkReceiver();
     }
 
-    public void initFtp()
+    private void initFtp()
     {
         new Thread(new Runnable() {
             @Override
@@ -181,6 +186,13 @@ public class MainActivity extends AppCompatActivity
                 }
             }
         }).start();
+    }
+
+    private void initToolBar()
+    {
+        //img_status = (ImageView) findViewById(R.id.img_status);
+        toolbar = (Toolbar) findViewById(R.id.toolbar);
+        toolbar.inflateMenu(R.menu.toolbar_menu);
     }
 
     private void initNetWorkReceiver()
@@ -251,10 +263,11 @@ public class MainActivity extends AppCompatActivity
 
     public void changeConnectState(boolean objectStatus)
     {
-        if (objectStatus == false && img_status.getTag().equals("connected"))
+        if (objectStatus == false)
         {
-            img_status.setImageResource(R.drawable.disconnected);
-            img_status.setTag("disconnected");
+            //img_status.setImageResource(R.drawable.disconnected);
+            toolbar.getMenu().getItem(0).setIcon(R.drawable.disconnected);
+            //img_status.setTag("disconnected");
             showToast("Connection fail, please check your internet setting");
             // 登出ftp服务器
             //new Thread(new Runnable() {
@@ -271,10 +284,11 @@ public class MainActivity extends AppCompatActivity
             //    }
             //}).start();
         }
-        else if (objectStatus == true && img_status.getTag().equals("disconnected"))
+        else if (objectStatus == true)
         {
             // 重新连接并更新各fragment的ftp引用
             try{
+                toolbar.getMenu().getItem(0).setIcon(R.drawable.connected);
                 new Thread(new Runnable() {
                     @Override
                     public void run()
@@ -288,8 +302,8 @@ public class MainActivity extends AppCompatActivity
                                 ((FtpFragment) fragments[0]).updateFtpList();
                                 ((GalleryFragment) fragments[1]).initFtp();
                                 ((LocalFragment) fragments[2]).initFtp();
-                                img_status.setImageResource(R.drawable.connected);
-                                img_status.setTag("connected");
+                                //img_status.setImageResource(R.drawable.connected);
+                                //img_status.setTag("connected");
                                 //showToast("Reconnect successfully");
                             } catch (IOException e) {
                                 e.printStackTrace();
