@@ -347,6 +347,7 @@ public class FtpFragment extends Fragment
             showToast("Download successfully");
         else
             showToast("Download fail or folder is empty");
+
     }
 
     public void deleteFinish(boolean result)

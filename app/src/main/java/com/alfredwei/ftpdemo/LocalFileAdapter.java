@@ -1,6 +1,7 @@
 package com.alfredwei.ftpdemo;
 
 import android.content.Context;
+import android.graphics.drawable.Drawable;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,6 +12,8 @@ import com.alfredwei.ftpdemo.ItemViewHolder;
 import java.io.File;
 import java.util.List;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.*;
+import com.bumptech.glide.request.target.SimpleTarget;
 
 public class LocalFileAdapter extends ArrayAdapter<File>
 {
@@ -28,7 +31,7 @@ public class LocalFileAdapter extends ArrayAdapter<File>
     public View getView(int position, View convertView, ViewGroup parent) {
         File file = getItem(position);
         View view;
-        ItemViewHolder viewHolder;
+        final ItemViewHolder viewHolder;
         if (convertView == null)
         {
             view = LayoutInflater.from(getContext()).inflate(itemId, parent, false);
@@ -50,6 +53,7 @@ public class LocalFileAdapter extends ArrayAdapter<File>
         else if (fileType.equals("jpg") || fileType.equals("jpeg") || fileType.equals("png"))
             Glide.with(view)
                     .load(file.getAbsolutePath())
+                    .thumbnail(0.1f)
                     .into(viewHolder.icon);
         else
             viewHolder.icon.setImageResource(R.drawable.file);

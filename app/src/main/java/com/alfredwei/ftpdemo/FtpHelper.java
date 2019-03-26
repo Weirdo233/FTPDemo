@@ -178,6 +178,7 @@ public class FtpHelper implements Serializable
         boolean result = false;
         // 初始化FTP当前目录
         currentPath = remotePath;
+        ftpClient.setFileType(FTPClient.BINARY_FILE_TYPE);
         // 更改FTP目录
         ftpClient.changeWorkingDirectory(remotePath);
         // 得到FTP当前目录下所有文件
@@ -210,6 +211,7 @@ public class FtpHelper implements Serializable
         int fileCount = 0;
         // 初始化FTP当前目录
         String currentPath = remotePath;
+        ftpClient.setFileType(FTPClient.BINARY_FILE_TYPE);
         // 更改FTP目录
         ftpClient.changeWorkingDirectory(remotePath);
         // 得到FTP当前目录下所有文件
@@ -255,10 +257,13 @@ public class FtpHelper implements Serializable
         boolean flag;
         // 创建输出流
         OutputStream outputStream = new FileOutputStream(localFile);
-        // 下载单个文件
+        //// 下载单个文件
         flag = ftpClient.retrieveFile(ftpFile.getName(), outputStream);
-        // 关闭文件流
+        Log.d("retrieveFile", ""+ftpClient.getReplyCode());
+        outputStream.flush();
         outputStream.close();
+        //// 关闭文件流
+        //outputStream.close();
         return flag;
     }
 
